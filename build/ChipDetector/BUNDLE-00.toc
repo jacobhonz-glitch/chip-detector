@@ -1,0 +1,3 @@
+([('ChipDetector',
+   '/Users/jacobhan/projects/chip-detector/dist/ChipDetector',
+   'EXECUTABLE')],)
