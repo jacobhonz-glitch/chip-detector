@@ -1,4 +1,4 @@
-<!-- chip-detector/web/index.html - 设备识别主页面 -->
+<!-- chip-detector/web/index.html - 设备识别主页面（含云端芯片详情） -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -25,7 +25,6 @@
         }
         .app { display: flex; height: 100vh; }
 
-        /* 侧边栏 */
         .sidebar {
             width: 240px;
             background: #0a0f1a;
@@ -49,7 +48,6 @@
             font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
         }
 
-        /* 主区域 */
         .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .header {
             padding: 16px 24px; border-bottom: 1px solid #1e293b;
@@ -72,7 +70,6 @@
 
         .content { flex: 1; padding: 24px; overflow-y: auto; }
 
-        /* 状态条 */
         .status-bar {
             display: flex; align-items: center; gap: 12px;
             padding: 12px 16px; background: var(--card); border-radius: 8px; margin-bottom: 20px;
@@ -81,7 +78,6 @@
         .status-dot.online { background: var(--green); animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        /* 统计卡片 */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
         .stat-card {
             background: var(--card); border-radius: 8px; padding: 16px;
@@ -90,7 +86,6 @@
         .stat-card .value { font-size: 28px; font-weight: 700; }
         .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-        /* 设备列表 */
         .device-list { display: flex; flex-direction: column; gap: 12px; }
         .device-card {
             background: var(--card); border-radius: 8px; padding: 16px;
@@ -112,10 +107,11 @@
         .device-card .vid-pid { font-size: 12px; color: var(--muted); font-family: monospace; margin-top: 2px; }
         .device-card .chip {
             font-size: 14px; font-weight: 600; margin-top: 4px;
-            display: flex; align-items: center; gap: 6px;
+            display: flex; align-items: center; gap: 6px; cursor: pointer;
         }
         .device-card .chip.detected { color: var(--green); }
-        .device-card .chip.unknown { color: var(--yellow); }
+        .device-card .chip.detected:hover { text-decoration: underline; }
+        .device-card .chip.unknown { color: var(--yellow); cursor: default; }
         .device-card .actions-right { display: flex; gap: 8px; flex-shrink: 0; }
 
         .tag {
@@ -129,7 +125,6 @@
         .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
         .empty-state .icon-big { font-size: 56px; margin-bottom: 16px; }
 
-        /* Toast */
         .toast {
             position: fixed; top: 20px; right: 20px;
             padding: 12px 20px; border-radius: 8px; color: #fff;
@@ -140,13 +135,76 @@
         .toast.error { background: #7f1d1d; }
         .toast.info { background: #1e3a5f; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* 芯片详情弹窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75); display: flex;
+            align-items: center; justify-content: center; z-index: 2000;
+        }
+        .modal {
+            background: var(--card); border-radius: 12px;
+            width: 90%; max-width: 720px; max-height: 85vh; overflow-y: auto;
+            border: 1px solid #334155;
+        }
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid #1e293b;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 18px; font-weight: 600; position: sticky; top: 0;
+            background: var(--card); border-radius: 12px 12px 0 0;
+        }
+        .modal-close {
+            background: none; border: none; color: var(--muted);
+            font-size: 22px; cursor: pointer; padding: 4px 8px;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-body { padding: 24px; }
+        .modal-loading { text-align: center; color: var(--muted); padding: 48px 0; }
+        .modal-loading .spinner {
+            width: 32px; height: 32px; border: 3px solid #334155;
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .chip-grid .item {
+            background: #0a0f1a; padding: 14px; border-radius: 8px;
+        }
+        .chip-grid .item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .chip-grid .item .value { font-size: 15px; font-weight: 600; margin-top: 6px; }
+        .chip-links { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .chip-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 18px; background: var(--accent); color: #000;
+            border-radius: 8px; text-decoration: none;
+            font-size: 13px; font-weight: 600; transition: all 0.2s;
+        }
+        .chip-link:hover { background: #7dd3fc; transform: translateY(-1px); }
+        .chip-link.secondary { background: #334155; color: var(--text); }
+        .chip-link.secondary:hover { background: #475569; }
+        .code-block {
+            background: #0a0f1a; padding: 16px; border-radius: 8px;
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px;
+            line-height: 1.6; overflow-x: auto; white-space: pre;
+            color: #22c55e; margin-top: 8px;
+        }
+        .code-block .comment { color: #64748b; }
+        .code-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px;
+        }
+        .code-header span { font-size: 12px; color: var(--muted); }
+        .code-header button {
+            background: #334155; border: none; color: var(--text);
+            padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div class="app">
-        <!-- 侧边栏 -->
         <aside class="sidebar">
-            <div class="logo">🔍 ChipDetector<span>芯片识别系统 v0.1</span></div>
+            <div class="logo">🔍 ChipDetector<span>芯片识别系统 v0.2</span></div>
             <nav>
                 <a href="/" class="nav-item active">📋 设备识别<span class="badge" id="deviceCount">0</span></a>
                 <a href="/history.html" class="nav-item">📜 识别历史</a>
@@ -158,7 +216,6 @@
             </div>
         </aside>
 
-        <!-- 主区域 -->
         <main class="main">
             <header class="header">
                 <h1>📋 设备识别</h1>
@@ -170,14 +227,12 @@
             </header>
 
             <div class="content">
-                <!-- 连接状态 -->
                 <div class="status-bar">
                     <div class="status-dot" id="statusDot"></div>
                     <span id="statusText">正在连接服务...</span>
                     <span style="margin-left: auto; font-size: 12px; color: var(--muted);" id="uptime"></span>
                 </div>
 
-                <!-- 统计 -->
                 <div class="stats">
                     <div class="stat-card">
                         <div class="value" id="statTotal">0</div>
@@ -197,7 +252,6 @@
                     </div>
                 </div>
 
-                <!-- 设备列表 -->
                 <div class="device-list" id="deviceList">
                     <div class="empty-state">
                         <div class="icon-big">🔌</div>
@@ -209,9 +263,26 @@
         </main>
     </div>
 
+    <!-- 芯片详情弹窗 -->
+    <div class="modal-overlay" id="modal" style="display:none;" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <span id="modalTitle">🎯 芯片详情</span>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>正在从云端获取芯片资料...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = 'http://localhost:19527';
         const WS_URL = 'ws://localhost:19527/ws';
+        const CLOUD_API = 'https://api.chip-detector.com/v1/chip-info'; // 替换为实际云端API
         let ws = null;
         let wsConnected = false;
 
@@ -221,7 +292,6 @@
             ws.onopen = () => {
                 wsConnected = true;
                 updateStatus(true);
-                toast('已连接到本地服务', 'success');
                 ws.send(JSON.stringify({ type: 'ping' }));
             };
             ws.onmessage = (e) => {
@@ -251,8 +321,7 @@
                 const res = await fetch(`${API}/api/scan`);
                 const data = await res.json();
                 if (data.success) {
-                    renderDevices(data.data.devices);
-                    toast(`扫描完成，发现 ${data.data.devices.length} 个设备`, 'info');
+                    renderDevices(data.data.usb_devices || data.data.devices || []);
                 } else {
                     toast(data.error, 'error');
                 }
@@ -293,8 +362,8 @@
 
             let identified = 0, pending = 0, cacheHit = 0;
             container.innerHTML = devices.map(dev => {
-                const vidHex = '0x' + dev.vid.toString(16).padStart(4, '0').toUpperCase();
-                const pidHex = '0x' + dev.pid.toString(16).padStart(4, '0').toUpperCase();
+                const vidHex = '0x' + (dev.vid || 0).toString(16).padStart(4, '0').toUpperCase();
+                const pidHex = '0x' + (dev.pid || 0).toString(16).padStart(4, '0').toUpperCase();
                 const hasChip = !!dev.chip;
                 const fromCache = dev.from_cache;
                 if (hasChip) identified++;
@@ -313,15 +382,15 @@
                     <div class="info">
                         <div class="name">${dev.device_class || 'Unknown Device'}</div>
                         <div class="vid-pid">VID: ${vidHex} &nbsp; PID: ${pidHex} &nbsp;|&nbsp; 序列号: ${dev.serial || '无'}</div>
-                        <div class="chip ${hasChip ? 'detected' : 'unknown'}">
-                            ${hasChip ? '🎯 ' + dev.chip : '⚠️ 未识别'}
+                        <div class="chip ${hasChip ? 'detected' : 'unknown'}" ${hasChip ? `onclick="showChipDetail('${dev.chip}')" title="点击查看芯片详情"` : ''}>
+                            ${hasChip ? '🎯 ' + dev.chip + ' <span style="font-size:11px;color:var(--accent);">详情 →</span>' : '⚠️ 未识别'}
                             ${fromCache ? '<span class="tag tag-cache">缓存</span>' : ''}
                             ${dev.needs_probe ? '<span class="tag tag-probe">需探测</span>' : ''}
                             ${dev.confidence > 0.9 ? '<span class="tag tag-confident">高置信度</span>' : ''}
                         </div>
                     </div>
                     <div class="actions-right">
-                        ${dev.needs_probe ? `<button class="btn btn-secondary" onclick="probeDevice('${vidHex}','${pidHex}','${dev.serial || ''}')">🔬 探测</button>` : ''}
+                        ${dev.needs_probe ? `<button class="btn btn-secondary" onclick="event.stopPropagation();probeDevice('${vidHex}','${pidHex}','${dev.serial || ''}')">🔬 探测</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -348,7 +417,7 @@
                 const data = await res.json();
                 if (data.success) {
                     toast(`探测成功: ${data.data.chip}`, 'success');
-                    quickDetect(); // 刷新
+                    quickDetect();
                 } else {
                     toast(data.error, 'error');
                 }
@@ -358,6 +427,129 @@
         }
 
         function clearLogs() { toast('日志已清空', 'info'); }
+
+        // ========== 芯片详情弹窗 ==========
+        async function showChipDetail(chip) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modal.style.display = 'flex';
+            modalTitle.textContent = '🎯 ' + chip;
+            modalBody.innerHTML = `
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>正在从云端获取 ${chip} 的详细资料...</p>
+                </div>`;
+
+            try {
+                const res = await fetch(`${CLOUD_API}?chip=${encodeURIComponent(chip)}`);
+                if (!res.ok) throw new Error('云端请求失败');
+                const data = await res.json();
+                renderChipDetail(data);
+            } catch (err) {
+                console.log('云端不可用，使用本地缓存:', err.message);
+                renderChipDetail(getLocalChipData(chip));
+            }
+        }
+
+        function renderChipDetail(data) {
+            const modalBody = document.getElementById('modalBody');
+            const linksHtml = (data.datasheet || data.sdk || data.pinout || data.reference) ? `
+                <div class="chip-links">
+                    ${data.datasheet ? `<a class="chip-link" href="${data.datasheet}" target="_blank">📄 数据手册</a>` : ''}
+                    ${data.sdk ? `<a class="chip-link secondary" href="${data.sdk}" target="_blank">💻 SDK 下载</a>` : ''}
+                    ${data.pinout ? `<a class="chip-link secondary" href="${data.pinout}" target="_blank">📌 引脚图</a>` : ''}
+                    ${data.reference ? `<a class="chip-link secondary" href="${data.reference}" target="_blank">📚 参考设计</a>` : ''}
+                </div>` : '';
+
+            const codeHtml = data.code ? `
+                <div class="code-header">
+                    <span>📝 初始化代码示例</span>
+                    <button onclick="copyCode(this)">📋 复制</button>
+                </div>
+                <div class="code-block">${escapeHtml(data.code)}</div>` : '';
+
+            modalBody.innerHTML = `
+                <div class="chip-grid">
+                    <div class="item"><div class="label">芯片型号</div><div class="value">${data.model || '-'}</div></div>
+                    <div class="item"><div class="label">内核架构</div><div class="value">${data.core || '-'}</div></div>
+                    <div class="item"><div class="label">Flash 存储</div><div class="value">${data.flash || '-'}</div></div>
+                    <div class="item"><div class="label">RAM 内存</div><div class="value">${data.ram || '-'}</div></div>
+                    <div class="item"><div class="label">主频</div><div class="value">${data.freq || '-'}</div></div>
+                    <div class="item"><div class="label">工作电压</div><div class="value">${data.voltage || '-'}</div></div>
+                    <div class="item"><div class="label">GPIO 数量</div><div class="value">${data.gpio || '-'}</div></div>
+                    <div class="item"><div class="label">通信接口</div><div class="value">${data.interfaces || '-'}</div></div>
+                </div>
+                ${linksHtml}
+                ${codeHtml}
+                ${data.vendor_url ? `<p style="margin-top:16px;font-size:12px;color:var(--muted);">🏢 厂商: <a href="${data.vendor_url}" target="_blank" style="color:var(--accent);">${data.vendor || '访问官网'}</a></p>` : ''}
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function copyCode(btn) {
+            const codeBlock = btn.closest('.modal-body').querySelector('.code-block');
+            if (codeBlock) {
+                navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+                    btn.textContent = '✅ 已复制';
+                    setTimeout(() => btn.textContent = '📋 复制', 1500);
+                });
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ========== 本地芯片数据库（云端不可用时兜底） ==========
+        function getLocalChipData(chip) {
+            const db = {
+                'STM32F407VGT6': {
+                    model:'STM32F407VGT6',core:'ARM Cortex-M4',flash:'1MB',ram:'192KB',
+                    freq:'168MHz',voltage:'1.8V-3.6V',gpio:'82',interfaces:'SPI×3, I2C×3, USART×4, USB OTG, CAN×2',
+                    datasheet:'https://www.st.com/resource/en/datasheet/stm32f407vg.pdf',
+                    sdk:'https://github.com/STMicroelectronics/STM32CubeF4',
+                    pinout:'https://www.st.com/resource/en/pinout/stm32f407vg.pdf',
+                    code:`// STM32F407 初始化代码\n#include "stm32f4xx.h"\n\nvoid SystemClock_Config(void) {\n  // 配置 168MHz 主频\n  RCC_ClkInitTypeDef clk = {0};\n  HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_5);\n}\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  while(1) {}\n}`,
+                    vendor:'STMicroelectronics',vendor_url:'https://www.st.com'
+                },
+                'ESP32-C3': {
+                    model:'ESP32-C3',core:'RISC-V 32位',flash:'4MB',ram:'400KB SRAM',
+                    freq:'160MHz',voltage:'3.0V-3.6V',gpio:'22',interfaces:'SPI×3, I2C×1, UART×2, USB Serial/JTAG',
+                    datasheet:'https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf',
+                    sdk:'https://github.com/espressif/esp-idf',
+                    pinout:'https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitm-1.html',
+                    code:`// ESP32-C3 初始化\n#include "freertos/FreeRTOS.h"\n#include "freertos/task.h"\n\nvoid app_main(void) {\n  printf("Hello ESP32-C3!\\n");\n  while(1) {\n    vTaskDelay(1000 / portTICK_PERIOD_MS);\n  }\n}`,
+                    vendor:'Espressif',vendor_url:'https://www.espressif.com'
+                },
+                'RP2040': {
+                    model:'RP2040',core:'Dual Cortex-M0+',flash:'2MB (外部)',ram:'264KB SRAM',
+                    freq:'133MHz',voltage:'1.8V-3.3V',gpio:'30',interfaces:'SPI×2, I2C×2, UART×2, USB, PIO×2',
+                    datasheet:'https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf',
+                    sdk:'https://github.com/raspberrypi/pico-sdk',
+                    pinout:'https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf',
+                    code:`// RP2040 初始化\n#include "pico/stdlib.h"\n\nint main() {\n  stdio_init_all();\n  printf("Hello RP2040!\\n");\n  while(1) {\n    sleep_ms(1000);\n  }\n}`,
+                    vendor:'Raspberry Pi',vendor_url:'https://www.raspberrypi.com'
+                }
+            };
+
+            for (const key of Object.keys(db)) {
+                if (chip.includes(key) || key.includes(chip)) return db[key];
+            }
+            return {
+                model: chip,
+                core: '请连接云端获取完整参数',
+                flash: '-', ram: '-', freq: '-', voltage: '-', gpio: '-', interfaces: '-',
+                datasheet: '', sdk: '', pinout: '', code: '',
+                vendor: '', vendor_url: ''
+            };
+        }
 
         // ========== Toast ==========
         function toast(msg, type = 'info') {

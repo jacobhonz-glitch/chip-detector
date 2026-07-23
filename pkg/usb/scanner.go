@@ -1,6 +1,4 @@
 // chip-detector/pkg/usb/scanner.go
-// USB设备扫描与分类
-
 package usb
 
 import (
@@ -11,7 +9,6 @@ import (
 	"github.com/google/gousb"
 )
 
-// USBDeviceInfo USB设备信息
 type USBDeviceInfo struct {
 	VID          uint16      `json:"vid"`
 	PID          uint16      `json:"pid"`
@@ -24,7 +21,6 @@ type USBDeviceInfo struct {
 	PortName     string      `json:"port_name,omitempty"`
 }
 
-// DeviceClass 设备类型
 type DeviceClass string
 
 const (
@@ -34,14 +30,12 @@ const (
 	ClassUnknown    DeviceClass = "unknown"
 )
 
-// ScanResult 扫描结果
 type ScanResult struct {
 	Devices   []USBDeviceInfo `json:"devices"`
 	Timestamp int64           `json:"timestamp"`
 	Duration  float64         `json:"duration_seconds"`
 }
 
-// Scanner USB扫描器
 type Scanner struct {
 	ctx           *gousb.Context
 	debuggerDB    map[uint16]map[uint16]string
@@ -50,72 +44,35 @@ type Scanner struct {
 	mu            sync.RWMutex
 }
 
-// NewScanner 创建扫描器
 func NewScanner() (*Scanner, error) {
 	ctx := gousb.NewContext()
-
 	s := &Scanner{
 		ctx:          ctx,
 		debuggerDB:   make(map[uint16]map[uint16]string),
 		serialDB:     make(map[uint16]map[uint16]string),
 		bootloaderDB: make(map[uint16]map[uint16]string),
 	}
-
 	s.initDatabases()
 	return s, nil
 }
 
-// initDatabases 初始化已知设备数据库
 func (s *Scanner) initDatabases() {
-	// 调试器
-	s.debuggerDB[0x0483] = map[uint16]string{
-		0x3748: "ST-Link/V2",
-		0x374b: "ST-Link/V2.1",
-		0x374f: "ST-Link/V3",
-		0x3753: "ST-Link/V3E",
-	}
-	s.debuggerDB[0x0d28] = map[uint16]string{
-		0x0204: "DAPLink",
-	}
-	s.debuggerDB[0x1366] = map[uint16]string{
-		0x0101: "J-Link",
-		0x0105: "J-Link EDU",
-	}
-	s.debuggerDB[0x1a86] = map[uint16]string{
-		0x8010: "WCH-Link",
-		0x8011: "WCH-LinkE",
-	}
+	s.debuggerDB[0x0483] = map[uint16]string{0x3748: "ST-Link/V2", 0x374b: "ST-Link/V2.1", 0x374f: "ST-Link/V3", 0x3753: "ST-Link/V3E"}
+	s.debuggerDB[0x0d28] = map[uint16]string{0x0204: "DAPLink"}
+	s.debuggerDB[0x1366] = map[uint16]string{0x0101: "J-Link", 0x0105: "J-Link EDU"}
+	s.debuggerDB[0x1a86] = map[uint16]string{0x8010: "WCH-Link", 0x8011: "WCH-LinkE"}
 
-	// USB转串口
-	s.serialDB[0x1a86] = map[uint16]string{
-		0x7523: "CH340",
-		0x55d4: "CH9102",
-	}
-	s.serialDB[0x10c4] = map[uint16]string{
-		0xea60: "CP2102",
-		0xea70: "CP2105",
-	}
-	s.serialDB[0x0403] = map[uint16]string{
-		0x6001: "FT232",
-		0x6015: "FT231X",
-	}
+	s.serialDB[0x1a86] = map[uint16]string{0x7523: "CH340", 0x55d4: "CH9102"}
+	s.serialDB[0x10c4] = map[uint16]string{0xea60: "CP2102", 0xea70: "CP2105"}
+	s.serialDB[0x0403] = map[uint16]string{0x6001: "FT232", 0x6015: "FT231X"}
 
-	// Bootloader
-	s.bootloaderDB[0x2e8a] = map[uint16]string{
-		0x0003: "RP2040 BOOTSEL",
-		0x0005: "RP2350 BOOTSEL",
-	}
-	s.bootloaderDB[0x0483] = map[uint16]string{
-		0xdf11: "STM32 DFU",
-	}
+	s.bootloaderDB[0x2e8a] = map[uint16]string{0x0003: "RP2040 BOOTSEL", 0x0005: "RP2350 BOOTSEL"}
+	s.bootloaderDB[0x0483] = map[uint16]string{0xdf11: "STM32 DFU"}
 }
 
-// Scan 执行完整扫描
 func (s *Scanner) Scan() (*ScanResult, error) {
 	startTime := time.Now()
-	result := &ScanResult{
-		Devices: make([]USBDeviceInfo, 0),
-	}
+	result := &ScanResult{Devices: make([]USBDeviceInfo, 0)}
 
 	devices, err := s.ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
 		return true
@@ -131,21 +88,23 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 
 	for _, dev := range devices {
 		desc := dev.Desc
+
 		info := USBDeviceInfo{
 			VID:        uint16(desc.Vendor),
 			PID:        uint16(desc.Product),
-			BusNumber:  dev.Bus,
-			PortNumber: dev.Port,
+			BusNumber:  desc.Bus,
+			PortNumber: desc.Address,
 		}
 
-		if vendorStr, err := dev.Vendor(); err == nil {
-			info.VendorName = vendorStr
+		// 获取字符串描述符
+		if str, err := dev.Manufacturer(); err == nil {
+			info.VendorName = str
 		}
-		if productStr, err := dev.Product(); err == nil {
-			info.ProductName = productStr
+		if str, err := dev.Product(); err == nil {
+			info.ProductName = str
 		}
-		if serialStr, err := dev.SerialNumber(); err == nil {
-			info.SerialNumber = serialStr
+		if str, err := dev.SerialNumber(); err == nil {
+			info.SerialNumber = str
 		}
 
 		info.DeviceClass = s.classify(info.VID, info.PID)
@@ -154,11 +113,9 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 
 	result.Duration = time.Since(startTime).Seconds()
 	result.Timestamp = time.Now().UnixMilli()
-
 	return result, nil
 }
 
-// classify 对设备进行分类
 func (s *Scanner) classify(vid, pid uint16) DeviceClass {
 	if pids, ok := s.debuggerDB[vid]; ok {
 		if _, ok := pids[pid]; ok {
@@ -178,7 +135,6 @@ func (s *Scanner) classify(vid, pid uint16) DeviceClass {
 	return ClassUnknown
 }
 
-// Close 关闭扫描器
 func (s *Scanner) Close() error {
 	return s.ctx.Close()
 }
