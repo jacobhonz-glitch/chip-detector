@@ -10,7 +10,6 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y libusb-1.0-0 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/chip-detector /app/chip-detector
 COPY --from=builder /app/web /app/web
-COPY --from=builder /app/dist /app/dist
 WORKDIR /app
 EXPOSE 8080
 CMD ["./chip-detector"]
