@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
 // ESPChipInfo ESP芯片识别结果

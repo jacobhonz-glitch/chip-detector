@@ -1,6 +1,4 @@
 // chip-detector/main.go
-// 芯片自动识别系统入口
-
 package main
 
 import (
@@ -8,18 +6,31 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"chip-detector/pkg/api"
 )
 
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	cmd.Start()
+}
+
 func main() {
-	// 处理退出信号
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// 创建路由
 	router := api.NewRouter()
 
 	httpServer := &http.Server{
@@ -27,24 +38,21 @@ func main() {
 		Handler: router,
 	}
 
-	// 启动服务
 	go func() {
 		fmt.Println("========================================")
-		fmt.Println("  Chip Detector - 芯片自动识别系统 v0.2")
+		fmt.Println("  Chip Detector v0.2 - 芯片自动识别")
 		fmt.Println("========================================")
-		fmt.Printf("  Web界面 : http://localhost:19527\n")
-		fmt.Printf("  API接口 : http://localhost:19527/api\n")
-		fmt.Printf("  WebSocket : ws://localhost:19527/ws\n")
+		fmt.Println("  http://localhost:19527")
 		fmt.Println("========================================")
-		fmt.Println("  按 Ctrl+C 退出")
-		fmt.Println()
+
+		// 自动打开浏览器
+		openBrowser("http://localhost:19527")
 
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("服务启动失败: %v", err)
 		}
 	}()
 
-	// 等待退出信号
 	<-sigChan
-	fmt.Println("\n正在关闭服务...")
+	fmt.Println("\n正在关闭...")
 }
