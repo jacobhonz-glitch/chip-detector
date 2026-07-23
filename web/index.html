@@ -199,6 +199,67 @@
             background: #334155; border: none; color: var(--text);
             padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
         }
+
+        /* 下载引导横幅 */
+        .download-banner {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .download-banner .banner-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .download-banner .banner-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .download-banner .banner-text h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .download-banner .banner-text p {
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .download-banner .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .download-banner .btn-download:hover {
+            background: #7dd3fc;
+            transform: translateY(-1px);
+        }
+        .download-banner .btn-close-banner {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+        .download-banner .btn-close-banner:hover {
+            color: var(--text);
+        }
     </style>
 </head>
 <body>
@@ -209,9 +270,10 @@
                 <a href="/" class="nav-item active">📋 设备识别<span class="badge" id="deviceCount">0</span></a>
                 <a href="/history.html" class="nav-item">📜 识别历史</a>
                 <a href="/settings.html" class="nav-item">⚙️ 系统设置</a>
+                <a href="/download.html" class="nav-item" style="color:var(--accent);">📥 下载应用</a>
             </nav>
             <div style="margin-top: auto; font-size: 11px; color: #475569;">
-                服务端口: 19527<br>
+                服务端口: 8080<br>
                 缓存路径: ~/.cache/chip-detector
             </div>
         </aside>
@@ -227,6 +289,22 @@
             </header>
 
             <div class="content">
+                <!-- 下载引导横幅 -->
+                <div class="download-banner" id="downloadBanner">
+                    <div class="banner-left">
+                        <div class="banner-icon">💻</div>
+                        <div class="banner-text">
+                            <h3>下载桌面应用获得完整体验</h3>
+                            <p>插上开发板即可自动识别芯片型号，无需手动配置</p>
+                        </div>
+                    </div>
+                    <a href="/download.html" class="btn-download">
+                        ⬇ 立即下载
+                    </a>
+                    <button class="btn-close-banner" onclick="document.getElementById('downloadBanner').style.display='none'" title="关闭">✕</button>
+                </div>
+
+                <!-- 连接状态 -->
                 <div class="status-bar">
                     <div class="status-dot" id="statusDot"></div>
                     <span id="statusText">正在连接服务...</span>
@@ -280,13 +358,12 @@
     </div>
 
     <script>
-        const API = 'http://localhost:19527';
-        const WS_URL = 'ws://localhost:19527/ws';
-        const CLOUD_API = 'https://api.chip-detector.com/v1/chip-info'; // 替换为实际云端API
+        const API = 'http://localhost:8080';
+        const WS_URL = 'ws://localhost:8080/ws';
+        const CLOUD_API = 'https://api.chip-detector.com/v1/chip-info';
         let ws = null;
         let wsConnected = false;
 
-        // ========== WebSocket ==========
         function connectWS() {
             ws = new WebSocket(WS_URL);
             ws.onopen = () => {
@@ -315,7 +392,6 @@
             document.getElementById('btnDetect').disabled = !online;
         }
 
-        // ========== API 调用 ==========
         async function scanUSB() {
             try {
                 const res = await fetch(`${API}/api/scan`);
@@ -326,7 +402,7 @@
                     toast(data.error, 'error');
                 }
             } catch (err) {
-                toast('连接失败，请确认服务已启动', 'error');
+                toast('连接失败，请确认本地服务已启动', 'error');
             }
         }
 
@@ -344,14 +420,13 @@
                     toast(data.error, 'error');
                 }
             } catch (err) {
-                toast('识别失败，请检查服务', 'error');
+                toast('识别失败，请确认本地服务已启动', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🔍 快速识别';
             }
         }
 
-        // ========== 渲染 ==========
         function renderDevices(devices) {
             const container = document.getElementById('deviceList');
             if (!devices || devices.length === 0) {
@@ -428,7 +503,6 @@
 
         function clearLogs() { toast('日志已清空', 'info'); }
 
-        // ========== 芯片详情弹窗 ==========
         async function showChipDetail(chip) {
             const modal = document.getElementById('modal');
             const modalTitle = document.getElementById('modalTitle');
@@ -448,7 +522,6 @@
                 const data = await res.json();
                 renderChipDetail(data);
             } catch (err) {
-                console.log('云端不可用，使用本地缓存:', err.message);
                 renderChipDetail(getLocalChipData(chip));
             }
         }
@@ -487,9 +560,7 @@
             `;
         }
 
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
         function copyCode(btn) {
             const codeBlock = btn.closest('.modal-body').querySelector('.code-block');
@@ -507,7 +578,6 @@
             return div.innerHTML;
         }
 
-        // ========== 本地芯片数据库（云端不可用时兜底） ==========
         function getLocalChipData(chip) {
             const db = {
                 'STM32F407VGT6': {
@@ -516,7 +586,7 @@
                     datasheet:'https://www.st.com/resource/en/datasheet/stm32f407vg.pdf',
                     sdk:'https://github.com/STMicroelectronics/STM32CubeF4',
                     pinout:'https://www.st.com/resource/en/pinout/stm32f407vg.pdf',
-                    code:`// STM32F407 初始化代码\n#include "stm32f4xx.h"\n\nvoid SystemClock_Config(void) {\n  // 配置 168MHz 主频\n  RCC_ClkInitTypeDef clk = {0};\n  HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_5);\n}\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  while(1) {}\n}`,
+                    code:`// STM32F407 初始化代码\n#include "stm32f4xx.h"\n\nvoid SystemClock_Config(void) {\n  RCC_ClkInitTypeDef clk = {0};\n  HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_5);\n}\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  while(1) {}\n}`,
                     vendor:'STMicroelectronics',vendor_url:'https://www.st.com'
                 },
                 'ESP32-C3': {
@@ -543,15 +613,13 @@
                 if (chip.includes(key) || key.includes(chip)) return db[key];
             }
             return {
-                model: chip,
-                core: '请连接云端获取完整参数',
+                model: chip, core: '请连接云端获取完整参数',
                 flash: '-', ram: '-', freq: '-', voltage: '-', gpio: '-', interfaces: '-',
                 datasheet: '', sdk: '', pinout: '', code: '',
                 vendor: '', vendor_url: ''
             };
         }
 
-        // ========== Toast ==========
         function toast(msg, type = 'info') {
             const el = document.createElement('div');
             el.className = `toast ${type}`;
@@ -560,7 +628,6 @@
             setTimeout(() => el.remove(), 3000);
         }
 
-        // ========== 初始化 ==========
         connectWS();
         setTimeout(scanUSB, 500);
     </script>
