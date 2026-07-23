@@ -22,7 +22,10 @@
         .btn-primary { background: var(--accent); color: #000; }
         .btn-primary:hover { background: #7dd3fc; }
         .footer { margin-top: 40px; font-size: 12px; color: #475569; }
-        .footer a { color: #475569; }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .back-link { margin-top: 16px; font-size: 13px; }
+        .back-link a { color: var(--muted); text-decoration: none; }
+        .back-link a:hover { color: var(--text); }
     </style>
 </head>
 <body>
@@ -35,13 +38,16 @@
             <div class="os-icon">🍎</div>
             <div class="os-name">macOS</div>
             <div class="os-hint">支持 macOS 12+ · 10MB</div>
-            <a class="btn btn-primary" href="https://github.com/jacobhonz-glitch/chip-detector/releases/download/v0.2.0/ChipDetector-0.2.0.dmg">下载 macOS 版</a>
+            <a class="btn btn-primary" href="/dist/ChipDetector-0.2.0.dmg">⬇ 下载 macOS 版</a>
         </div>
         <div class="download-card" id="card-win">
             <div class="os-icon">🪟</div>
             <div class="os-name">Windows</div>
             <div class="os-hint">支持 Windows 10/11 · 8.9MB</div>
-            <a class="btn btn-primary" href="https://github.com/jacobhonz-glitch/chip-detector/releases/download/v0.2.0/ChipDetector.exe">下载 Windows 版</a>
+            <a class="btn btn-primary" href="/dist/ChipDetector.exe">⬇ 下载 Windows 版</a>
+        </div>
+        <div class="back-link">
+            <a href="/">← 返回识别工具</a>
         </div>
         <div class="footer">版本 v0.2.0 · <a href="https://github.com/jacobhonz-glitch/chip-detector">GitHub</a></div>
     </div>
