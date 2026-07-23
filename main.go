@@ -34,7 +34,7 @@ func main() {
 	router := api.NewRouter()
 
 	httpServer := &http.Server{
-		Addr:    ":19527",
+		Addr:    ":8080",
 		Handler: router,
 	}
 
@@ -42,11 +42,11 @@ func main() {
 		fmt.Println("========================================")
 		fmt.Println("  Chip Detector v0.2 - 芯片自动识别")
 		fmt.Println("========================================")
-		fmt.Println("  http://localhost:19527")
+		fmt.Println("  http://localhost:8080")
 		fmt.Println("========================================")
 
 		// 自动打开浏览器
-		openBrowser("http://localhost:19527")
+		openBrowser("http://localhost:8080")
 
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("服务启动失败: %v", err)
