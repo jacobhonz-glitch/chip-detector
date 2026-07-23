@@ -1,0 +1,376 @@
+<!-- chip-detector/web/index.html - 设备识别主页面 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chip Detector - 设备识别</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #eab308;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .app { display: flex; height: 100vh; }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 240px;
+            background: #0a0f1a;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #1e293b;
+        }
+        .sidebar .logo { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 32px; }
+        .sidebar .logo span { font-size: 12px; color: var(--muted); display: block; font-weight: 400; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 6px; color: var(--muted);
+            cursor: pointer; transition: all 0.2s; margin-bottom: 4px;
+            text-decoration: none;
+        }
+        .nav-item:hover { background: #1e293b; color: var(--text); }
+        .nav-item.active { background: #1e293b; color: var(--accent); }
+        .nav-item .badge {
+            margin-left: auto; background: var(--accent); color: #000;
+            font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
+        }
+
+        /* 主区域 */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header {
+            padding: 16px 24px; border-bottom: 1px solid #1e293b;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header .actions { display: flex; gap: 8px; }
+
+        .btn {
+            padding: 8px 16px; border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-primary:hover { background: #7dd3fc; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: #334155; color: var(--text); }
+        .btn-secondary:hover { background: #475569; }
+        .btn-ghost { background: transparent; color: var(--muted); border: 1px solid #334155; }
+        .btn-ghost:hover { background: #1e293b; color: var(--text); }
+
+        .content { flex: 1; padding: 24px; overflow-y: auto; }
+
+        /* 状态条 */
+        .status-bar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; background: var(--card); border-radius: 8px; margin-bottom: 20px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+        .status-dot.online { background: var(--green); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* 统计卡片 */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-card {
+            background: var(--card); border-radius: 8px; padding: 16px;
+            border-left: 3px solid var(--accent);
+        }
+        .stat-card .value { font-size: 28px; font-weight: 700; }
+        .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+        /* 设备列表 */
+        .device-list { display: flex; flex-direction: column; gap: 12px; }
+        .device-card {
+            background: var(--card); border-radius: 8px; padding: 16px;
+            border-left: 3px solid var(--accent);
+            display: flex; align-items: center; gap: 16px;
+            transition: transform 0.2s;
+        }
+        .device-card:hover { transform: translateX(4px); }
+        .device-card .icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; flex-shrink: 0;
+        }
+        .device-card .icon.debugger { background: #1e3a5f; }
+        .device-card .icon.serial { background: #1e4a3a; }
+        .device-card .icon.bootloader { background: #4a3a1e; }
+        .device-card .info { flex: 1; min-width: 0; }
+        .device-card .name { font-weight: 600; font-size: 15px; }
+        .device-card .vid-pid { font-size: 12px; color: var(--muted); font-family: monospace; margin-top: 2px; }
+        .device-card .chip {
+            font-size: 14px; font-weight: 600; margin-top: 4px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .device-card .chip.detected { color: var(--green); }
+        .device-card .chip.unknown { color: var(--yellow); }
+        .device-card .actions-right { display: flex; gap: 8px; flex-shrink: 0; }
+
+        .tag {
+            font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500;
+            display: inline-block;
+        }
+        .tag-cache { background: #1e3a5f; color: var(--accent); }
+        .tag-probe { background: #4a3a1e; color: var(--yellow); }
+        .tag-confident { background: #1e4a3a; color: var(--green); }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state .icon-big { font-size: 56px; margin-bottom: 16px; }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            padding: 12px 20px; border-radius: 8px; color: #fff;
+            font-size: 14px; z-index: 1000; animation: slideIn 0.3s;
+            max-width: 400px;
+        }
+        .toast.success { background: #166534; }
+        .toast.error { background: #7f1d1d; }
+        .toast.info { background: #1e3a5f; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">🔍 ChipDetector<span>芯片识别系统 v0.1</span></div>
+            <nav>
+                <a href="/" class="nav-item active">📋 设备识别<span class="badge" id="deviceCount">0</span></a>
+                <a href="/history.html" class="nav-item">📜 识别历史</a>
+                <a href="/settings.html" class="nav-item">⚙️ 系统设置</a>
+            </nav>
+            <div style="margin-top: auto; font-size: 11px; color: #475569;">
+                服务端口: 19527<br>
+                缓存路径: ~/.cache/chip-detector
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="main">
+            <header class="header">
+                <h1>📋 设备识别</h1>
+                <div class="actions">
+                    <button class="btn btn-ghost" onclick="clearLogs()">清空日志</button>
+                    <button class="btn btn-secondary" onclick="scanUSB()">📡 扫描USB</button>
+                    <button class="btn btn-primary" id="btnDetect" onclick="quickDetect()">🔍 快速识别</button>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- 连接状态 -->
+                <div class="status-bar">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">正在连接服务...</span>
+                    <span style="margin-left: auto; font-size: 12px; color: var(--muted);" id="uptime"></span>
+                </div>
+
+                <!-- 统计 -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="value" id="statTotal">0</div>
+                        <div class="label">已发现设备</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--green);">
+                        <div class="value" id="statIdentified">0</div>
+                        <div class="label">已识别芯片</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--yellow);">
+                        <div class="value" id="statPending">0</div>
+                        <div class="label">待探测</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #6366f1;">
+                        <div class="value" id="statCache">0</div>
+                        <div class="label">缓存命中</div>
+                    </div>
+                </div>
+
+                <!-- 设备列表 -->
+                <div class="device-list" id="deviceList">
+                    <div class="empty-state">
+                        <div class="icon-big">🔌</div>
+                        <p style="font-size: 16px; margin-bottom: 8px;">未发现设备</p>
+                        <p>请连接开发板，然后点击「快速识别」或「扫描USB」</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API = 'http://localhost:19527';
+        const WS_URL = 'ws://localhost:19527/ws';
+        let ws = null;
+        let wsConnected = false;
+
+        // ========== WebSocket ==========
+        function connectWS() {
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => {
+                wsConnected = true;
+                updateStatus(true);
+                toast('已连接到本地服务', 'success');
+                ws.send(JSON.stringify({ type: 'ping' }));
+            };
+            ws.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'scan_result') renderDevices(msg.payload.devices);
+                if (msg.type === 'pong') updateStatus(true);
+            };
+            ws.onclose = () => {
+                wsConnected = false;
+                updateStatus(false);
+                setTimeout(connectWS, 3000);
+            };
+            ws.onerror = () => { wsConnected = false; updateStatus(false); };
+        }
+
+        function updateStatus(online) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            dot.className = 'status-dot' + (online ? ' online' : '');
+            text.textContent = online ? '服务已连接' : '服务断开，自动重连中...';
+            document.getElementById('btnDetect').disabled = !online;
+        }
+
+        // ========== API 调用 ==========
+        async function scanUSB() {
+            try {
+                const res = await fetch(`${API}/api/scan`);
+                const data = await res.json();
+                if (data.success) {
+                    renderDevices(data.data.devices);
+                    toast(`扫描完成，发现 ${data.data.devices.length} 个设备`, 'info');
+                } else {
+                    toast(data.error, 'error');
+                }
+            } catch (err) {
+                toast('连接失败，请确认服务已启动', 'error');
+            }
+        }
+
+        async function quickDetect() {
+            const btn = document.getElementById('btnDetect');
+            btn.disabled = true;
+            btn.textContent = '⏳ 识别中...';
+            try {
+                const res = await fetch(`${API}/api/quick-detect`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    renderDevices(data.data.devices);
+                    toast(`识别完成，耗时 ${data.data.scan_duration?.toFixed(2)}s`, 'success');
+                } else {
+                    toast(data.error, 'error');
+                }
+            } catch (err) {
+                toast('识别失败，请检查服务', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 快速识别';
+            }
+        }
+
+        // ========== 渲染 ==========
+        function renderDevices(devices) {
+            const container = document.getElementById('deviceList');
+            if (!devices || devices.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div class="icon-big">🤷</div><p style="font-size:16px;">未发现设备</p></div>`;
+                updateStats(0, 0, 0, 0);
+                return;
+            }
+
+            let identified = 0, pending = 0, cacheHit = 0;
+            container.innerHTML = devices.map(dev => {
+                const vidHex = '0x' + dev.vid.toString(16).padStart(4, '0').toUpperCase();
+                const pidHex = '0x' + dev.pid.toString(16).padStart(4, '0').toUpperCase();
+                const hasChip = !!dev.chip;
+                const fromCache = dev.from_cache;
+                if (hasChip) identified++;
+                if (dev.needs_probe) pending++;
+                if (fromCache) cacheHit++;
+
+                let iconClass = 'unknown';
+                if (dev.device_class === 'debugger') iconClass = 'debugger';
+                else if (dev.device_class === 'serial') iconClass = 'serial';
+                else if (dev.device_class === 'bootloader') iconClass = 'bootloader';
+                const iconEmoji = { debugger: '🔧', serial: '🔌', bootloader: '💾', unknown: '❓' }[dev.device_class] || '❓';
+
+                return `
+                <div class="device-card">
+                    <div class="icon ${iconClass}">${iconEmoji}</div>
+                    <div class="info">
+                        <div class="name">${dev.device_class || 'Unknown Device'}</div>
+                        <div class="vid-pid">VID: ${vidHex} &nbsp; PID: ${pidHex} &nbsp;|&nbsp; 序列号: ${dev.serial || '无'}</div>
+                        <div class="chip ${hasChip ? 'detected' : 'unknown'}">
+                            ${hasChip ? '🎯 ' + dev.chip : '⚠️ 未识别'}
+                            ${fromCache ? '<span class="tag tag-cache">缓存</span>' : ''}
+                            ${dev.needs_probe ? '<span class="tag tag-probe">需探测</span>' : ''}
+                            ${dev.confidence > 0.9 ? '<span class="tag tag-confident">高置信度</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="actions-right">
+                        ${dev.needs_probe ? `<button class="btn btn-secondary" onclick="probeDevice('${vidHex}','${pidHex}','${dev.serial || ''}')">🔬 探测</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+
+            updateStats(devices.length, identified, pending, cacheHit);
+            document.getElementById('deviceCount').textContent = devices.length;
+        }
+
+        function updateStats(total, identified, pending, cache) {
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statIdentified').textContent = identified;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statCache').textContent = cache;
+        }
+
+        async function probeDevice(vid, pid, serial) {
+            toast('正在探测...', 'info');
+            try {
+                const res = await fetch(`${API}/api/detect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vid: parseInt(vid), pid: parseInt(pid), serial })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    toast(`探测成功: ${data.data.chip}`, 'success');
+                    quickDetect(); // 刷新
+                } else {
+                    toast(data.error, 'error');
+                }
+            } catch (err) {
+                toast('探测失败', 'error');
+            }
+        }
+
+        function clearLogs() { toast('日志已清空', 'info'); }
+
+        // ========== Toast ==========
+        function toast(msg, type = 'info') {
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        // ========== 初始化 ==========
+        connectWS();
+        setTimeout(scanUSB, 500);
+    </script>
+</body>
+</html>

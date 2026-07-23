@@ -1,0 +1,182 @@
+<!-- chip-detector/web/history.html - 识别历史 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chip Detector - 识别历史</title>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --text: #e2e8f0;
+            --muted: #94a3b8; --accent: #38bdf8; --green: #22c55e;
+            --red: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--text); min-height: 100vh;
+        }
+        .app { display: flex; height: 100vh; }
+        .sidebar {
+            width: 240px; background: #0a0f1a; padding: 20px 16px;
+            display: flex; flex-direction: column; border-right: 1px solid #1e293b;
+        }
+        .sidebar .logo { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 32px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 6px; color: var(--muted);
+            cursor: pointer; transition: all 0.2s; margin-bottom: 4px;
+            text-decoration: none;
+        }
+        .nav-item:hover { background: #1e293b; color: var(--text); }
+        .nav-item.active { background: #1e293b; color: var(--accent); }
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header {
+            padding: 16px 24px; border-bottom: 1px solid #1e293b;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .btn {
+            padding: 8px 16px; border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+        }
+        .btn-secondary { background: #334155; color: var(--text); }
+        .btn-secondary:hover { background: #475569; }
+        .btn-ghost { background: transparent; color: var(--muted); border: 1px solid #334155; }
+        .content { flex: 1; padding: 24px; overflow-y: auto; }
+
+        .search-bar {
+            display: flex; gap: 12px; margin-bottom: 20px;
+        }
+        .search-bar input {
+            flex: 1; padding: 10px 14px; background: var(--card);
+            border: 1px solid #334155; border-radius: 6px;
+            color: var(--text); font-size: 14px; outline: none;
+        }
+        .search-bar input:focus { border-color: var(--accent); }
+        .search-bar input::placeholder { color: #475569; }
+
+        table {
+            width: 100%; border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 16px; text-align: left;
+            border-bottom: 1px solid #1e293b; font-size: 13px;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:hover { background: rgba(56, 189, 248, 0.03); }
+        .chip-cell { color: var(--green); font-weight: 600; font-family: monospace; }
+        .time-cell { color: var(--muted); font-size: 12px; }
+        .method-badge {
+            font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500;
+        }
+        .method-sw { background: #1e3a5f; color: var(--accent); }
+        .method-serial { background: #1e4a3a; color: var(--green); }
+        .empty-state { text-align: center; padding: 60px; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">🔍 ChipDetector<span style="font-size:11px;color:var(--muted);display:block;font-weight:400;">芯片识别系统 v0.1</span></div>
+            <nav>
+                <a href="/" class="nav-item">📋 设备识别</a>
+                <a href="/history.html" class="nav-item active">📜 识别历史</a>
+                <a href="/settings.html" class="nav-item">⚙️ 系统设置</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <h1>📜 识别历史</h1>
+                <div class="actions" style="display:flex;gap:8px;">
+                    <button class="btn btn-ghost" onclick="exportCSV()">📥 导出CSV</button>
+                    <button class="btn btn-secondary" onclick="clearHistory()">🗑 清空历史</button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="search-bar">
+                    <input type="text" placeholder="搜索芯片型号、VID/PID..." oninput="filterTable(this.value)">
+                </div>
+
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>芯片型号</th>
+                            <th>VID/PID</th>
+                            <th>识别方式</th>
+                            <th>耗时</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                    </tbody>
+                </table>
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <p style="font-size:48px;margin-bottom:12px;">📭</p>
+                    <p>暂无识别记录</p>
+                    <p style="font-size:12px;color:#475569;margin-top:4px;">连接设备并完成识别后将自动记录</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 模拟历史数据（后续接入后端API /api/history）
+        const mockHistory = [
+            { time: '2026-07-23 14:32:01', chip: 'STM32F407VGT6', vid: '0x0483', pid: '0x3748', method: 'sw', duration: '0.41s' },
+            { time: '2026-07-23 14:28:15', chip: 'ESP32-C3', vid: '0x303A', pid: '0x1001', method: 'serial', duration: '0.28s' },
+            { time: '2026-07-23 14:15:42', chip: 'RP2040', vid: '0x2E8A', pid: '0x0003', method: 'bootloader', duration: '0.12s' },
+            { time: '2026-07-23 13:50:33', chip: 'CH32V307', vid: '0x1A86', pid: '0x8010', method: 'sw', duration: '0.35s' },
+            { time: '2026-07-23 13:22:10', chip: 'STM32F103C8T6', vid: '0x0483', pid: '0x3748', method: 'sw', duration: '0.38s' },
+        ];
+
+        function renderHistory(data) {
+            const tbody = document.getElementById('historyBody');
+            const empty = document.getElementById('emptyState');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            tbody.innerHTML = data.map(r => `
+                <tr>
+                    <td class="time-cell">${r.time}</td>
+                    <td class="chip-cell">${r.chip}</td>
+                    <td>${r.vid} / ${r.pid}</td>
+                    <td><span class="method-badge method-${r.method}">${r.method.toUpperCase()}</span></td>
+                    <td class="time-cell">${r.duration}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterTable(query) {
+            const filtered = mockHistory.filter(r =>
+                r.chip.toLowerCase().includes(query.toLowerCase()) ||
+                r.vid.includes(query) || r.pid.includes(query)
+            );
+            renderHistory(filtered);
+        }
+
+        function exportCSV() {
+            let csv = '时间,芯片型号,VID,PID,识别方式,耗时\n';
+            mockHistory.forEach(r => csv += `${r.time},${r.chip},${r.vid},${r.pid},${r.method},${r.duration}\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'chip-history.csv'; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearHistory() {
+            if (confirm('确定清空所有识别历史？此操作不可恢复。')) {
+                mockHistory.length = 0;
+                renderHistory([]);
+            }
+        }
+
+        renderHistory(mockHistory);
+    </script>
+</body>
+</html>
