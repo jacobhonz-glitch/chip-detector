@@ -1,6 +1,6 @@
 module chip-detector
 
-go 1.25.0
+go 1.22
 
 require go.bug.st/serial v1.8.0
 
